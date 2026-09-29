@@ -1,7 +1,9 @@
 # VertiGate to harp-tech device: gap analysis and migration plan
 
-> Status: analysis, plus Phase 1 repo hygiene (`.gitattributes`, `.gitignore`) on `aa-dev/harp-migration`.
-> No firmware, interface, or hardware changes have been made.
+> Status: **historical**. Written in September 2026, before the work started, and kept as the
+> record of the process rather than as a live plan. It describes the repository as it was then,
+> so its paths and the board name are out of date. The layout it proposed is in place and the
+> decisions it asked for were taken; see the closed issues and `device.yml`.
 > Sources checked: `harp-tech/protocol` (spec + `schema/{device,core,registers}.json`),
 > `harp-tech/whoami`, `harp-tech/generators`, `harp-tech/toolkit`, `harp-tech/core.pico`,
 > `harp-tech/core.atxmega`, `bonsai-rx/prefect` (reference trees + `Ruleset.cs`), `harp-tech/device.template`,
@@ -311,7 +313,7 @@ firmware, the generated interfaces, the Bonsai workflow, and the documentation.
 
 Real defects in the current code:
 
-- **S8 payloads are decoded as unsigned.** [`firmware/vertigate/register.py:44-47`](../firmware/vertigate/register.py#L44-L47)
+- **S8 payloads are decoded as unsigned.** [`firmware/vertigate/register.py:44-47`](../../firmware/vertigate/register.py#L44-L47)
   does `offset = payload[0]` on a memoryview, so a written `-10` arrives as `246`, and
   `max(min(246, 127), -128)` clamps it to `+127`. **Negative offsets are impossible today.**
   Needs `struct.unpack` or an explicit sign fix.
@@ -320,7 +322,7 @@ Real defects in the current code:
   applies `val & 0x7F`. `_speed` stores the raw byte and then applies `vel & 0xFF` plus a `+60`
   offset. Write `200` to Torque and the device replies `200` while running at `72`. Either clamp
   before storing, or reject out-of-range writes with an error reply (spec case 5 allows this).
-- **Version registers are wrong.** [`firmware/vertigate/main.py`](../firmware/vertigate/main.py) passes `who_am_i`
+- **Version registers are wrong.** [`firmware/vertigate/main.py`](../../firmware/vertigate/main.py) passes `who_am_i`
   and `device_name` but not `fw_version` / `hw_version`, so microharp defaults to `(1,0)` /
   `(1,0)` while `device.yml` declares `0.1` / `0.1`. `R_HW_VERSION_H/L`, `R_FW_VERSION_H/L` and
   bytes 3 to 8 of `R_VERSION` are all wrong.
@@ -336,7 +338,7 @@ Real defects in the current code:
   so the device always comes up on the bus.
 - **Stale `_ismoving` after a new command.** `move()` cancels the running `_run()` task. The
   cancelled task never runs `_disable()`, so state can be left inconsistent. The `isr.set()` /
-  `clear()` pattern in [`firmware/vertigate/task.py`](../firmware/vertigate/task.py) can also merge two quick
+  `clear()` pattern in [`firmware/vertigate/task.py`](../../firmware/vertigate/task.py) can also merge two quick
   transitions into one event.
 - **Torque and Speed setters switch `torque_enabled` off and on.** Writing Speed while the gate
   is holding will drop the gate. Document this, or make the setters wait while the gate is
@@ -405,7 +407,7 @@ it writes `R_OPERATION_CTRL` with the **DUMP** bit (bit 3) set. Per `Device.md`,
 *"SHALL send a sequence of `Read` messages to the Controller, one per register, with the current
 contents of all core and application registers"*, after the write reply. `Bonsai.Harp`'s
 `Device` operator sets `DumpRegisters = true` in its constructor, so every Bonsai workflow does
-this at startup by default. [`bonsai/example.bonsai`](../bonsai/example.bonsai) already has it
+this at startup by default. [`bonsai/example.bonsai`](../../bonsai/example.bonsai) already has it
 enabled. `harp-tech/core.pico` implements the device side in `harp_core.cpp` (masks DUMP out of
 stored state, sends one READ per core register, then calls `dump_app_registers()`).
 
@@ -413,7 +415,7 @@ stored state, sends one READ per core register, then calls `dump_app_registers()
 write reply first, then `_dump_all_registers()` sends one READ per register, each with its own
 timestamp, then clears the bit. It also calls `on_read` handlers.
 
-**The payloads are wrong.** In [`firmware/vertigate/register.py:14-18`](../firmware/vertigate/register.py#L14-L18)
+**The payloads are wrong.** In [`firmware/vertigate/register.py:14-18`](../../firmware/vertigate/register.py#L14-L18)
 all five application registers are created with no initial value and **no `on_read` handler**,
 and `RegisterEntry.storage` is a zeroed `bytearray`. A dump right after boot reports:
 
